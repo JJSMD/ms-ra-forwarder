@@ -73,21 +73,40 @@ export async function POST(request: Request) {
         const authResponse = checkAuth(request)
         if (authResponse) return authResponse
 
-        const body = await request.json()
-        const text = String(body.text ?? '')
+        // 同时支持 JSON 和 form-urlencoded 格式
+        const contentType = request.headers.get('content-type') || ''
+        let text = '', voice = '', pitch: any, rate: any, volume: any, personality: any
+        if (contentType.includes('application/json')) {
+            const body = await request.json()
+            text = body.text
+            voice = body.voice
+            pitch = body.pitch
+            rate = body.rate
+            volume = body.volume
+            personality = body.personality
+        } else {
+            const formData = await request.formData()
+            text = formData.get('text') as string
+            voice = formData.get('voice') as string
+            pitch = formData.get('pitch')
+            rate = formData.get('rate')
+            volume = formData.get('volume')
+            personality = formData.get('personality')
+        }
+        text = String(text ?? '')
         if (!text) {
             return new Response(JSON.stringify({ error: 'Text is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
         }
-        const voice = String(body.voice ?? '')
+        voice = String(voice ?? '')
         if (!voice) {
             return new Response(JSON.stringify({ error: 'Voice is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
         }
-        const pitch = parseNumberParam(body.pitch, 0, -100, 100);
-        const rate = parseNumberParam(body.rate, 0, -100, 100);
-        const volume = parseNumberParam(body.volume, 100, -100, 100);
-        const personality = body.personality ?? undefined;
+        const finalPitch = parseNumberParam(pitch, 0, -100, 100);
+        const finalRate = parseNumberParam(rate, 0, -100, 100);
+        const finalVolume = parseNumberParam(volume, 100, -100, 100);
+        const finalPersonality = personality ?? undefined;
 
-        return await handleTTSRequest(text, voice, volume, rate, pitch, personality)
+        return await handleTTSRequest(text, voice, finalVolume, finalRate, finalPitch, finalPersonality)
     } catch (error) {
         console.log('textToSpeach error', error)
         return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } })
