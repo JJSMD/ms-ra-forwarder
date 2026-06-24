@@ -1,4 +1,5 @@
 import { EdgeTTSService } from "@/service/edge-tts-service"
+import { EdgeTTSClient } from "@/service/edge-tts-service/client"
 import { TTSOptions } from "@/service/tts-service"
 Error.stackTraceLimit = Infinity;
 
@@ -13,6 +14,17 @@ async function handleTTSRequest(text: string, voice: string, volume: number, rat
     }
     const speech = await service.convert(text, options)
     const audioBlob = new Blob([speech.audio], { type: 'audio/mpeg' });
+    return new Response(audioBlob, { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+}
+
+async function handleRawSSMLRequest(ssml: string) {
+    console.log('[handleRawSSML] converting raw SSML, length:', ssml.length)
+    const result = await EdgeTTSClient.convert(ssml, {
+        format: "audio-24khz-96kbitrate-mono-mp3",
+        sentenceBoundaryEnabled: false,
+        wordBoundaryEnabled: false,
+    })
+    const audioBlob = new Blob([result.audio], { type: 'audio/mpeg' });
     return new Response(audioBlob, { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
 }
 
@@ -79,12 +91,22 @@ export async function POST(request: Request) {
         const authResponse = checkAuth(request)
         if (authResponse) return authResponse
 
-        // 同时支持 JSON 和 form-urlencoded 格式
+        const bodyText = await request.text()
+        console.log('[POST] raw body length:', bodyText.length)
+        console.log('[POST] raw body preview:', bodyText.substring(0, 200))
+
+        // 如果 body 是原始 SSML（以 <speak 开头），直接转发
+        if (bodyText.trim().startsWith('<speak')) {
+            console.log('[POST] detected raw SSML, passing directly')
+            return await handleRawSSMLRequest(bodyText)
+        }
+
+        // 否则按 JSON 或 form-urlencoded 格式解析
         const contentType = request.headers.get('content-type') || ''
         let text = '', voice = ''
         let pitch: string | null | undefined, rate: string | null | undefined, volume: string | null | undefined, personality: string | null | undefined
         if (contentType.includes('application/json')) {
-            const body = await request.json()
+            const body = JSON.parse(bodyText)
             console.log('[POST] JSON body:', JSON.stringify(body))
             text = body.text
             voice = body.voice
@@ -93,9 +115,6 @@ export async function POST(request: Request) {
             volume = body.volume
             personality = body.personality
         } else {
-            const bodyText = await request.text()
-            console.log('[POST] raw body text:', bodyText)
-            console.log('[POST] raw body length:', bodyText.length)
             const params = new URLSearchParams(bodyText)
             text = params.get('text') ?? ''
             voice = params.get('voice') ?? ''
