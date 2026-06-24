@@ -70,6 +70,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
+        console.log('[POST] method:', request.method)
+        console.log('[POST] url:', request.url)
+        console.log('[POST] content-type:', request.headers.get('content-type'))
+        console.log('[POST] content-length:', request.headers.get('content-length'))
+        console.log('[POST] authorization:', request.headers.get('authorization') ? 'present' : 'none')
+
         const authResponse = checkAuth(request)
         if (authResponse) return authResponse
 
@@ -79,6 +85,7 @@ export async function POST(request: Request) {
         let pitch: string | null | undefined, rate: string | null | undefined, volume: string | null | undefined, personality: string | null | undefined
         if (contentType.includes('application/json')) {
             const body = await request.json()
+            console.log('[POST] JSON body:', JSON.stringify(body))
             text = body.text
             voice = body.voice
             pitch = body.pitch
@@ -87,6 +94,8 @@ export async function POST(request: Request) {
             personality = body.personality
         } else {
             const bodyText = await request.text()
+            console.log('[POST] raw body text:', bodyText)
+            console.log('[POST] raw body length:', bodyText.length)
             const params = new URLSearchParams(bodyText)
             text = params.get('text') ?? ''
             voice = params.get('voice') ?? ''
@@ -95,13 +104,18 @@ export async function POST(request: Request) {
             volume = params.get('volume')
             personality = params.get('personality')
         }
+        console.log('[POST] parsed - text:', text ? text.substring(0, 50) + (text.length > 50 ? '...' : '') : '(empty)')
+        console.log('[POST] parsed - voice:', voice || '(empty, will use default)')
+        console.log('[POST] parsed - pitch:', pitch, 'rate:', rate, 'volume:', volume, 'personality:', personality)
         text = String(text ?? '')
         if (!text) {
+            console.log('[POST] text is empty, returning 400')
             return new Response(JSON.stringify({ error: 'Text is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
         }
         voice = String(voice ?? '')
         if (!voice) {
-            return new Response(JSON.stringify({ error: 'Voice is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+            // 默认使用晓晓
+            voice = 'Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)'
         }
         const finalPitch = parseNumberParam(pitch, 0, -100, 100);
         const finalRate = parseNumberParam(rate, 0, -100, 100);
