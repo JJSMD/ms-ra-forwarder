@@ -27,7 +27,7 @@ function checkAuth(request: Request): Response | null {
     return null
 }
 
-function parseNumberParam(value: string | null, defaultValue: number, min: number, max: number) {
+function parseNumberParam(value: string | null | undefined, defaultValue: number, min: number, max: number) {
     if (value === null || value === undefined) {
         return defaultValue;
     }
@@ -75,7 +75,8 @@ export async function POST(request: Request) {
 
         // 同时支持 JSON 和 form-urlencoded 格式
         const contentType = request.headers.get('content-type') || ''
-        let text = '', voice = '', pitch: any, rate: any, volume: any, personality: any
+        let text = '', voice = ''
+        let pitch: string | null | undefined, rate: string | null | undefined, volume: string | null | undefined, personality: string | null | undefined
         if (contentType.includes('application/json')) {
             const body = await request.json()
             text = body.text
@@ -88,10 +89,10 @@ export async function POST(request: Request) {
             const formData = await request.formData()
             text = formData.get('text') as string
             voice = formData.get('voice') as string
-            pitch = formData.get('pitch')
-            rate = formData.get('rate')
-            volume = formData.get('volume')
-            personality = formData.get('personality')
+            pitch = formData.get('pitch') as string
+            rate = formData.get('rate') as string
+            volume = formData.get('volume') as string
+            personality = formData.get('personality') as string
         }
         text = String(text ?? '')
         if (!text) {
