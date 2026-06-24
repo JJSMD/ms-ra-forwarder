@@ -40,5 +40,5 @@ COPY --from=builder /app/.next/static ./.next/static
 # 开放端口
 EXPOSE 3000
 
-# 启动（必须用 sh -c 覆盖 HOSTNAME，防止 Railway/Docker 默认 hostname 导致绑定失败）
+# 启动（HOSTNAME=0.0.0.0 防止 Railway/Docker 默认 hostname 导致绑定失败）
 CMD ["sh", "-c", "HOSTNAME=0.0.0.0 node server.js"]
