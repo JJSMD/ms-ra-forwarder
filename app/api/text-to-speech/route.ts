@@ -86,13 +86,14 @@ export async function POST(request: Request) {
             volume = body.volume
             personality = body.personality
         } else {
-            const formData = await request.formData()
-            text = formData.get('text') as string
-            voice = formData.get('voice') as string
-            pitch = formData.get('pitch') as string
-            rate = formData.get('rate') as string
-            volume = formData.get('volume') as string
-            personality = formData.get('personality') as string
+            const bodyText = await request.text()
+            const params = new URLSearchParams(bodyText)
+            text = params.get('text') ?? ''
+            voice = params.get('voice') ?? ''
+            pitch = params.get('pitch')
+            rate = params.get('rate')
+            volume = params.get('volume')
+            personality = params.get('personality')
         }
         text = String(text ?? '')
         if (!text) {
