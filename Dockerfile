@@ -28,6 +28,8 @@ WORKDIR /app
 # 生产环境变量
 ENV NODE_ENV=production
 ENV PORT=3000
+# 覆盖 Docker 自动设置的 HOSTNAME（容器 ID），防止 Next.js standalone 绑定失败
+ENV HOSTNAME=0.0.0.0
 
 # 拷贝构建产物
 # public 静态资源
